@@ -1,0 +1,41 @@
+{
+  "name": "sepa-check",
+  "version": "0.1.0",
+  "description": "CLI for the free SEPA pain.001 validator API at checksepa.com",
+  "license": "MIT",
+  "author": "Bobook Limited",
+  "type": "module",
+  "bin": {
+    "sepa-check": "./bin/sepa-check.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wenboteng/sepa-validator.git",
+    "directory": "cli-node"
+  },
+  "homepage": "https://checksepa.com",
+  "bugs": {
+    "url": "https://github.com/wenboteng/sepa-validator/issues"
+  },
+  "keywords": [
+    "sepa",
+    "pain.001",
+    "iso20022",
+    "validator",
+    "iban",
+    "xml",
+    "credit-transfer"
+  ]
+}

@@ -1,0 +1,314 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SepaCheck API",
+    "version": "1.0.0",
+    "description": "Free single-file validation of ISO 20022 SEPA credit transfer XML (pain.001.001.03 and pain.001.001.09). No API key. 30 requests per IP per hour, 200 per IP per UTC day, 2 MB maximum. Higher limits and API keys: https://checksepa.com/api-waitlist. The website route POST /api/validate is a different contract.",
+    "contact": {
+      "name": "Bobook Limited",
+      "email": "info@bobook.club",
+      "url": "https://checksepa.com/impressum"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://checksepa.com"
+    }
+  ],
+  "tags": [
+    {
+      "name": "validate",
+      "description": "Public, keyless SEPA XML check"
+    }
+  ],
+  "paths": {
+    "/v1/validate": {
+      "post": {
+        "tags": ["validate"],
+        "operationId": "validateSepa",
+        "summary": "Validate one SEPA XML file",
+        "description": "Accepts multipart form field `file` or a raw XML body. The file is checked in memory and discarded. pain.001.001.03 and pain.001.001.09 are validated. Other ISO 20022 messages, including pain.008 and camt.053/054, are identified and returned with valid: false.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "SEPA XML file, maximum 2 MB"
+                  }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "type": "string",
+                "description": "Raw pain.001 XML document, maximum 2 MB"
+              }
+            },
+            "text/xml": {
+              "schema": {
+                "type": "string",
+                "description": "Raw pain.001 XML document, maximum 2 MB"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation report. HTTP 200 is used for both passing and failing files.",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "description": "Hourly free-tier limit for this IP (30).",
+                "schema": { "type": "integer", "example": 30 }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Validations remaining in the current UTC hour.",
+                "schema": { "type": "integer" }
+              },
+              "X-RateLimit-Reset": {
+                "description": "Unix time (seconds) when the current UTC hour ends.",
+                "schema": { "type": "integer" }
+              },
+              "X-RateLimit-Limit-Day": {
+                "description": "Daily free-tier limit for this IP (200).",
+                "schema": { "type": "integer", "example": 200 }
+              },
+              "X-RateLimit-Remaining-Day": {
+                "description": "Validations remaining in the current UTC day.",
+                "schema": { "type": "integer" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationReport" },
+                "examples": {
+                  "invalidPain001": {
+                    "summary": "First error from the published invalid sample",
+                    "value": {
+                      "valid": false,
+                      "format": "pain.001",
+                      "version": "pain.001.001.03",
+                      "errors": [
+                        {
+                          "code": "EPC-CTRLSUM",
+                          "message": "CtrlSum is 999.00 but the transactions sum to 175.50.",
+                          "path": "/Document/CstmrCdtTrfInitn/GrpHdr/CtrlSum",
+                          "line": 8
+                        }
+                      ],
+                      "warnings": []
+                    }
+                  },
+                  "validPain001": {
+                    "summary": "Passing pain.001.001.09 file",
+                    "value": {
+                      "valid": true,
+                      "format": "pain.001",
+                      "version": "pain.001.001.09",
+                      "errors": [],
+                      "warnings": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty body, or multipart request without a file field.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorReport" },
+                "example": {
+                  "valid": false,
+                  "error": "empty",
+                  "message": "Empty file.",
+                  "docs": "https://checksepa.com/docs"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "GET or HEAD. Use POST.",
+            "headers": {
+              "Allow": {
+                "schema": { "type": "string", "example": "POST" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorReport" },
+                "example": {
+                  "valid": false,
+                  "error": "method_not_allowed",
+                  "message": "Use POST with multipart form field 'file', or a raw XML body. Docs: https://checksepa.com/docs",
+                  "docs": "https://checksepa.com/docs"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File larger than 2 MB. This response does not consume the free quota when Content-Length is already over the limit.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorReport" },
+                "example": {
+                  "valid": false,
+                  "error": "payload_too_large",
+                  "message": "File is larger than 2 MB.",
+                  "docs": "https://checksepa.com/docs"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Free limit exceeded: 30 validations per IP per hour, or 200 per IP per UTC day. Retry-After is set. Higher limits: https://checksepa.com/api-waitlist",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": { "type": "integer" }
+              },
+              "X-RateLimit-Limit": {
+                "schema": { "type": "integer" }
+              },
+              "X-RateLimit-Remaining": {
+                "schema": { "type": "integer" }
+              },
+              "X-RateLimit-Reset": {
+                "schema": { "type": "integer" }
+              },
+              "X-RateLimit-Limit-Day": {
+                "schema": { "type": "integer" }
+              },
+              "X-RateLimit-Remaining-Day": {
+                "schema": { "type": "integer" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorReport" },
+                "examples": {
+                  "hourly": {
+                    "value": {
+                      "valid": false,
+                      "error": "rate_limit",
+                      "message": "Free limit: 30 validations per IP per hour. Retry shortly, or join the waitlist for higher limits and API keys.",
+                      "limit": "hourly",
+                      "waitlist": "https://checksepa.com/api-waitlist",
+                      "docs": "https://checksepa.com/docs"
+                    }
+                  },
+                  "daily": {
+                    "value": {
+                      "valid": false,
+                      "error": "rate_limit",
+                      "message": "Free limit: 200 validations per IP per UTC day. Join the waitlist for higher limits and API keys.",
+                      "limit": "daily",
+                      "waitlist": "https://checksepa.com/api-waitlist",
+                      "docs": "https://checksepa.com/docs"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["validate"],
+        "operationId": "validateSepaHelp",
+        "summary": "Method not allowed",
+        "description": "Documents that validation is POST-only. Safe for crawlers that fetch the URL.",
+        "responses": {
+          "405": {
+            "description": "Use POST.",
+            "headers": {
+              "Allow": { "schema": { "type": "string", "example": "POST" } }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorReport" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Finding": {
+        "type": "object",
+        "required": ["code", "message", "path", "line"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": ["EPC-CTRLSUM", "EPC-IBAN", "XSD-REQUIRED", "XSD-VERSION"]
+          },
+          "message": { "type": "string" },
+          "path": {
+            "type": "string",
+            "description": "XPath-like location. Repeated payment blocks use a 1-based index.",
+            "examples": ["/Document/CstmrCdtTrfInitn/GrpHdr/CtrlSum"]
+          },
+          "line": {
+            "type": ["integer", "null"],
+            "description": "1-based line number, or null when the finding cannot be placed."
+          }
+        }
+      },
+      "ValidationReport": {
+        "type": "object",
+        "required": ["valid", "format", "version", "errors", "warnings"],
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "True only when errors is empty."
+          },
+          "format": {
+            "type": ["string", "null"],
+            "description": "Message family, for example pain.001, pain.008, or camt.053.",
+            "examples": ["pain.001"]
+          },
+          "version": {
+            "type": ["string", "null"],
+            "description": "Full ISO 20022 message identifier when the file carries one.",
+            "examples": ["pain.001.001.03", "pain.001.001.09"]
+          },
+          "errors": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Finding" }
+          },
+          "warnings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Finding" }
+          }
+        }
+      },
+      "ErrorReport": {
+        "type": "object",
+        "required": ["valid", "error", "message"],
+        "properties": {
+          "valid": { "type": "boolean", "const": false },
+          "error": {
+            "type": "string",
+            "enum": ["method_not_allowed", "empty", "missing_file", "bad_request", "payload_too_large", "rate_limit"]
+          },
+          "message": { "type": "string" },
+          "limit": {
+            "type": "string",
+            "enum": ["hourly", "daily"],
+            "description": "Present when error is rate_limit."
+          },
+          "waitlist": { "type": "string", "format": "uri" },
+          "docs": { "type": "string", "format": "uri" }
+        }
+      }
+    }
+  }
+}

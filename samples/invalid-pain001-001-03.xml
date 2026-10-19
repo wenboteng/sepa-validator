@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>SEPA-CHECK-INVALID-001</MsgId>
+      <CreDtTm>2026-09-12T10:00:00</CreDtTm>
+      <NbOfTxs>5</NbOfTxs>
+      <CtrlSum>999.00</CtrlSum>
+      <InitgPty>
+        <Nm>Nordlicht GmbH</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMT-2026-0912-99</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <NbOfTxs>5</NbOfTxs>
+      <CtrlSum>999.00</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>2026-09-15</ReqdExctnDt>
+      <Dbtr>
+        <Nm>Nordlicht GmbH</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>COBADEFFXXX</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>DEBT</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>E2E-BAD-IBAN</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">100.00</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>Windmill Supplies B.V.</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89370400440532013001</IBAN>
+          </Id>
+        </CdtrAcct>
+      </CdtTrfTxInf>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId></EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">75.50</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>Atelier Dupont</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>FR1420041010050500013M02606</IBAN>
+          </Id>
+        </CdtrAcct>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>
