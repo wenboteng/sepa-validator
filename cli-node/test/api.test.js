@@ -47,3 +47,20 @@ test("help and a missing file do not need the network", () => {
   assert.equal(emptyRun.status, 2);
   assert.match(emptyRun.stderr, /empty file/);
 });
+
+test("camt subcommand help and a missing file do not need the network", () => {
+  const help = spawnSync(process.execPath, [bin, "camt", "--help"], { encoding: "utf8" });
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /checksepa.com\/v1\/camt\/validate/);
+  assert.match(help.stdout, /checksepa.com\/v1\/camt\/convert/);
+
+  const missing = spawnSync(process.execPath, [bin, "camt", "validate", "no-such-camt.xml"], { encoding: "utf8" });
+  assert.equal(missing.status, 2);
+  assert.match(missing.stderr, /file not found/);
+
+  const convert = spawnSync(process.execPath, [bin, "camt", "convert", "no-such-camt.xml", "--format", "csv"], {
+    encoding: "utf8",
+  });
+  assert.equal(convert.status, 2);
+  assert.match(convert.stderr, /file not found/);
+});

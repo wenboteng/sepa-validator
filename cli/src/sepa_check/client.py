@@ -7,10 +7,13 @@ from pathlib import Path
 from typing import Any
 
 API_URL = "https://checksepa.com/v1/validate"
+CAMT_VALIDATE_URL = "https://checksepa.com/v1/camt/validate"
+CAMT_CONVERT_URL = "https://checksepa.com/v1/camt/convert"
 WAITLIST_URL = "https://checksepa.com/api-waitlist"
 DOCS_URL = "https://checksepa.com/docs"
+CAMT_DOCS_URL = "https://checksepa.com/camt"
 MAX_BYTES = 2 * 1024 * 1024
-USER_AGENT = "sepa-check/0.1.0 (+https://checksepa.com)"
+USER_AGENT = "sepa-check/0.2.0 (+https://checksepa.com)"
 TIMEOUT = (10, 120)
 
 
@@ -101,7 +104,7 @@ def validate_path(path: Path) -> dict[str, Any]:
     return validate_bytes(path.name, path.read_bytes(), content_type_for(path.name))
 
 
-def validate_bytes(filename: str, data: bytes, content_type: str) -> dict[str, Any]:
+def _post_file(url: str, filename: str, data: bytes, content_type: str) -> Any:
     if not data:
         raise ClientError("empty file")
     if len(data) > MAX_BYTES:
@@ -109,14 +112,18 @@ def validate_bytes(filename: str, data: bytes, content_type: str) -> dict[str, A
     import requests
 
     try:
-        response = requests.post(
-            API_URL,
+        return requests.post(
+            url,
             files={"file": (filename, data, content_type)},
-            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+            headers={"User-Agent": USER_AGENT, "Accept": "application/json, text/csv"},
             timeout=TIMEOUT,
         )
     except requests.RequestException as exc:
         raise ClientError(f"network error: {exc}") from exc
+
+
+def validate_bytes(filename: str, data: bytes, content_type: str, url: str = API_URL) -> dict[str, Any]:
+    response = _post_file(url, filename, data, content_type)
     if response.status_code != 200:
         raise ClientError(_http_error(response))
     try:
@@ -126,6 +133,45 @@ def validate_bytes(filename: str, data: bytes, content_type: str) -> dict[str, A
     if not isinstance(payload, dict):
         raise ClientError("API returned an unexpected JSON response")
     return normalize(payload)
+
+
+def camt_validate_path(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        raise ClientError(f"file not found: {path}")
+    size = path.stat().st_size
+    if size == 0:
+        raise ClientError(f"empty file: {path}")
+    if size > MAX_BYTES:
+        raise ClientError(f"file is larger than 2 MB, the API limit: {path}")
+    return validate_bytes(path.name, path.read_bytes(), content_type_for(path.name), CAMT_VALIDATE_URL)
+
+
+def camt_convert_path(path: Path, output_format: str = "json") -> str:
+    if output_format not in ("json", "csv"):
+        raise ClientError("format must be json or csv")
+    if not path.is_file():
+        raise ClientError(f"file not found: {path}")
+    size = path.stat().st_size
+    if size == 0:
+        raise ClientError(f"empty file: {path}")
+    if size > MAX_BYTES:
+        raise ClientError(f"file is larger than 2 MB, the API limit: {path}")
+    response = _post_file(
+        f"{CAMT_CONVERT_URL}?format={output_format}",
+        path.name,
+        path.read_bytes(),
+        content_type_for(path.name),
+    )
+    if response.status_code != 200:
+        raise ClientError(_http_error(response))
+    if output_format == "csv":
+        text = response.text
+        return text if text.endswith("\n") else text + "\n"
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise ClientError("API returned a non-JSON response") from exc
+    return dumps(payload)
 
 
 def _http_error(response: Any) -> str:

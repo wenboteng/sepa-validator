@@ -33,6 +33,24 @@ class CliOfflineTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 2)
         self.assertIn("file not found", proc.stderr)
 
+    def test_camt_help_and_missing_file(self):
+        help_proc = run_cli("camt", "--help")
+        self.assertEqual(help_proc.returncode, 0)
+        self.assertIn("https://checksepa.com/v1/camt/validate", help_proc.stdout)
+        self.assertIn("https://checksepa.com/v1/camt/convert", help_proc.stdout)
+
+        missing = run_cli("camt", "validate", "no-such-camt.xml")
+        self.assertEqual(missing.returncode, 2)
+        self.assertIn("file not found", missing.stderr)
+
+        convert = run_cli("camt", "convert", "no-such-camt.xml", "--format", "csv")
+        self.assertEqual(convert.returncode, 2)
+        self.assertIn("file not found", convert.stderr)
+
+        bad = run_cli("camt", "convert", "no-such-camt.xml", "--format", "pdf")
+        self.assertEqual(bad.returncode, 2)
+        self.assertIn("json or csv", bad.stderr)
+
     def test_empty_file_does_not_call_the_api(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "empty.xml"

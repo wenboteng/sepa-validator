@@ -1,12 +1,12 @@
 # sepa-validator-mcp
 
-Stdio MCP server with one tool, `validate_sepa`. It uploads a SEPA XML file to the free keyless API `POST https://checksepa.com/v1/validate`.
+Stdio MCP server, version 0.2.0. Tools: `validate_sepa` (`POST https://checksepa.com/v1/validate`), `camt_validate` (`POST https://checksepa.com/v1/camt/validate`), and `camt_convert` (`POST https://checksepa.com/v1/camt/convert`, `format` `json` or `csv`).
 
 Input: exactly one of `file_path` (read by this process) or `xml` (the document as a string).
 
 Output: `valid`, `format`, `version`, `errors[]`, and `warnings[]`. Each finding has `code`, `message`, `path`, and `line` (`line` is an integer or null).
 
-The live check covers pain.001.001.03 and pain.001.001.09. pain.008 and camt files are recognised and returned with `valid: false`.
+`validate_sepa` covers pain.001.001.03 and pain.001.001.09. `camt_validate` and `camt_convert` cover camt.053 and camt.054 versions .02 and .08. pain.008 is recognised by `validate_sepa` and returned with `valid: false`. The three routes share the free limit.
 
 Free limit: 30 requests per IP per hour, 200 per UTC day, 2 MB. The file is not stored. The tool calls the network, so it is not a local read-only check. Higher limits and API keys: https://checksepa.com/api-waitlist
 

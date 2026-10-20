@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.02">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr>
+      <MsgId>MSG-054-02-BAD</MsgId>
+      <CreDtTm>2026-10-02T09:30:00+02:00</CreDtTm>
+    </GrpHdr>
+    <Ntfctn>
+      <Id>NTFC-BAD</Id>
+      <CreDtTm>2026-10-02T09:30:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+      </Acct>
+      <Ntry>
+        <Amt Ccy="EUR">8.40</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>DONE</Sts>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>

@@ -2,10 +2,13 @@ import { readFile, stat } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 
 export const API_URL = "https://checksepa.com/v1/validate";
+export const CAMT_VALIDATE_URL = "https://checksepa.com/v1/camt/validate";
+export const CAMT_CONVERT_URL = "https://checksepa.com/v1/camt/convert";
 export const WAITLIST_URL = "https://checksepa.com/api-waitlist";
 export const DOCS_URL = "https://checksepa.com/docs";
+export const CAMT_DOCS_URL = "https://checksepa.com/camt";
 export const MAX_BYTES = 2 * 1024 * 1024;
-export const USER_AGENT = "sepa-check/0.1.0 (+https://checksepa.com)";
+export const USER_AGENT = "sepa-check/0.2.0 (+https://checksepa.com)";
 
 export class ClientError extends Error {
   constructor(message) {
@@ -108,16 +111,15 @@ export async function validatePath(filePath) {
   return validateBytes(name, bytes, contentTypeFor(name));
 }
 
-export async function validateBytes(filename, bytes, contentType) {
+async function postFile(url, filename, bytes, contentType) {
   if (!bytes || bytes.length === 0) throw new ClientError("empty file");
   if (bytes.length > MAX_BYTES) throw new ClientError("file is larger than 2 MB, the API limit");
   const form = encodeMultipart(filename, bytes, contentType);
-  let response;
   try {
-    response = await fetch(API_URL, {
+    return await fetch(url, {
       method: "POST",
       headers: {
-        Accept: "application/json",
+        Accept: "application/json, text/csv",
         "User-Agent": USER_AGENT,
         "Content-Type": form.contentType,
       },
@@ -127,6 +129,9 @@ export async function validateBytes(filename, bytes, contentType) {
   } catch (err) {
     throw new ClientError(`network error: ${err instanceof Error ? err.message : err}`);
   }
+}
+
+async function readJsonReport(response) {
   const text = await response.text();
   if (response.status !== 200) throw new ClientError(httpError(response, text));
   let payload;
@@ -138,7 +143,52 @@ export async function validateBytes(filename, bytes, contentType) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new ClientError("API returned an unexpected JSON response");
   }
-  return normalize(payload);
+  return payload;
+}
+
+export async function validateBytes(filename, bytes, contentType, url = API_URL) {
+  const response = await postFile(url, filename, bytes, contentType);
+  return normalize(await readJsonReport(response));
+}
+
+export async function camtValidatePath(filePath) {
+  const { name, bytes } = await readChecked(filePath);
+  return validateBytes(name, bytes, contentTypeFor(name), CAMT_VALIDATE_URL);
+}
+
+export async function camtConvertPath(filePath, outputFormat = "json") {
+  if (outputFormat !== "json" && outputFormat !== "csv") throw new ClientError("format must be json or csv");
+  const { name, bytes } = await readChecked(filePath);
+  const response = await postFile(
+    `${CAMT_CONVERT_URL}?format=${outputFormat}`,
+    name,
+    bytes,
+    contentTypeFor(name),
+  );
+  const text = await response.text();
+  if (response.status !== 200) throw new ClientError(httpError(response, text));
+  if (outputFormat === "csv") return text.endsWith("\n") ? text : text + "\n";
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    throw new ClientError("API returned a non-JSON response");
+  }
+  return dumps(payload);
+}
+
+async function readChecked(filePath) {
+  let info;
+  try {
+    info = await stat(filePath);
+  } catch (err) {
+    if (err && err.code === "ENOENT") throw new ClientError(`file not found: ${filePath}`);
+    throw new ClientError(`cannot read file: ${filePath}`);
+  }
+  if (!info.isFile()) throw new ClientError(`file not found: ${filePath}`);
+  if (info.size === 0) throw new ClientError(`empty file: ${filePath}`);
+  if (info.size > MAX_BYTES) throw new ClientError(`file is larger than 2 MB, the API limit: ${filePath}`);
+  return { name: filePath.split(/[\\/]/).pop() || "document.xml", bytes: await readFile(filePath) };
 }
 
 function httpError(response, text) {

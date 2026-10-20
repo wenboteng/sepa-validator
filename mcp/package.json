@@ -1,7 +1,7 @@
 {
   "name": "sepa-validator-mcp",
-  "version": "0.1.0",
-  "description": "MCP server: validate one SEPA XML file with the free checksepa.com API.",
+  "version": "0.2.0",
+  "description": "MCP server: validate SEPA pain.001 and camt.053/054 files with the free checksepa.com API.",
   "mcpName": "io.github.wenboteng/sepa-validator",
   "license": "MIT",
   "author": "Bobook Limited",
@@ -38,6 +38,8 @@
   "keywords": [
     "sepa",
     "pain.001",
+    "camt.053",
+    "camt.054",
     "iso20022",
     "validator",
     "mcp",

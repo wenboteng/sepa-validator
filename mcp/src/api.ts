@@ -3,9 +3,11 @@ import { randomBytes } from "node:crypto";
 import { basename } from "node:path";
 
 export const API_URL = "https://checksepa.com/v1/validate";
+export const CAMT_VALIDATE_URL = "https://checksepa.com/v1/camt/validate";
+export const CAMT_CONVERT_URL = "https://checksepa.com/v1/camt/convert";
 export const WAITLIST_URL = "https://checksepa.com/api-waitlist";
 export const MAX_BYTES = 2 * 1024 * 1024;
-const USER_AGENT = "sepa-validator-mcp/0.1.0 (+https://checksepa.com)";
+const USER_AGENT = "sepa-validator-mcp/0.2.0 (+https://checksepa.com)";
 
 export class ApiError extends Error {
   constructor(message: string) {
@@ -73,16 +75,15 @@ function encodeMultipart(filename: string, bytes: Buffer): { body: Buffer; conte
   return { body: Buffer.concat([head, bytes, tail]), contentType: `multipart/form-data; boundary=${boundary}` };
 }
 
-async function postBytes(filename: string, bytes: Buffer): Promise<ValidationResult> {
+async function postBytes(url: string, filename: string, bytes: Buffer): Promise<Response> {
   if (bytes.length === 0) throw new ApiError("empty file");
   if (bytes.length > MAX_BYTES) throw new ApiError("file is larger than 2 MB, the API limit");
   const form = encodeMultipart(filename, bytes);
-  let response: Response;
   try {
-    response = await fetch(API_URL, {
+    return await fetch(url, {
       method: "POST",
       headers: {
-        Accept: "application/json",
+        Accept: "application/json, text/csv",
         "User-Agent": USER_AGENT,
         "Content-Type": form.contentType,
       },
@@ -92,20 +93,26 @@ async function postBytes(filename: string, bytes: Buffer): Promise<ValidationRes
   } catch (err) {
     throw new ApiError(`network error: ${err instanceof Error ? err.message : err}`);
   }
-  const text = await response.text();
-  if (response.status !== 200) {
-    const retry = response.headers.get("retry-after");
-    const wait = retry ? ` Retry-After: ${retry}s.` : "";
-    if (response.status === 429) {
-      throw new ApiError(
-        `rate limit reached (HTTP 429).${wait} Free limit: 30 per IP per hour, 200 per UTC day. Waitlist: ${WAITLIST_URL}`,
-      );
-    }
-    if (response.status === 413) {
-      throw new ApiError("file too large (HTTP 413). The API accepts at most 2 MB.");
-    }
-    throw new ApiError(`HTTP ${response.status}.${wait} ${text.slice(0, 300)}`.trim());
+}
+
+function httpFailure(response: Response, text: string): ApiError {
+  const retry = response.headers.get("retry-after");
+  const wait = retry ? ` Retry-After: ${retry}s.` : "";
+  if (response.status === 429) {
+    return new ApiError(
+      `rate limit reached (HTTP 429).${wait} Free limit: 30 per IP per hour, 200 per UTC day. Waitlist: ${WAITLIST_URL}`,
+    );
   }
+  if (response.status === 413) {
+    return new ApiError("file too large (HTTP 413). The API accepts at most 2 MB.");
+  }
+  return new ApiError(`HTTP ${response.status}.${wait} ${text.slice(0, 300)}`.trim());
+}
+
+async function postReport(url: string, filename: string, bytes: Buffer): Promise<ValidationResult> {
+  const response = await postBytes(url, filename, bytes);
+  const text = await response.text();
+  if (response.status !== 200) throw httpFailure(response, text);
   let payload: unknown;
   try {
     payload = JSON.parse(text);
@@ -131,10 +138,60 @@ export async function validatePath(filePath: string): Promise<ValidationResult> 
   if (info.size === 0) throw new ApiError(`empty file: ${filePath}`);
   if (info.size > MAX_BYTES) throw new ApiError(`file is larger than 2 MB, the API limit: ${filePath}`);
   const bytes = await readFile(filePath);
-  return postBytes(basename(filePath) || "pain.xml", bytes);
+  return postReport(API_URL, basename(filePath) || "pain.xml", bytes);
 }
 
 export async function validateXml(xml: string): Promise<ValidationResult> {
   const bytes = Buffer.from(xml, "utf8");
-  return postBytes("document.xml", bytes);
+  return postReport(API_URL, "document.xml", bytes);
+}
+
+async function readChecked(filePath: string): Promise<{ name: string; bytes: Buffer }> {
+  let info;
+  try {
+    info = await stat(filePath);
+  } catch (err) {
+    const code = err && typeof err === "object" && "code" in err ? String(err.code) : "";
+    if (code === "ENOENT") throw new ApiError(`file not found: ${filePath}`);
+    throw new ApiError(`cannot read file: ${filePath}`);
+  }
+  if (!info.isFile()) throw new ApiError(`file not found: ${filePath}`);
+  if (info.size === 0) throw new ApiError(`empty file: ${filePath}`);
+  if (info.size > MAX_BYTES) throw new ApiError(`file is larger than 2 MB, the API limit: ${filePath}`);
+  return { name: basename(filePath) || "document.xml", bytes: await readFile(filePath) };
+}
+
+export async function camtValidatePath(filePath: string): Promise<ValidationResult> {
+  const file = await readChecked(filePath);
+  return postReport(CAMT_VALIDATE_URL, file.name, file.bytes);
+}
+
+export async function camtValidateXml(xml: string): Promise<ValidationResult> {
+  return postReport(CAMT_VALIDATE_URL, "document.xml", Buffer.from(xml, "utf8"));
+}
+
+export async function camtConvertPath(filePath: string, outputFormat: "json" | "csv"): Promise<unknown> {
+  const file = await readChecked(filePath);
+  return camtConvertBytes(file.name, file.bytes, outputFormat);
+}
+
+export async function camtConvertXml(xml: string, outputFormat: "json" | "csv"): Promise<unknown> {
+  return camtConvertBytes("document.xml", Buffer.from(xml, "utf8"), outputFormat);
+}
+
+async function camtConvertBytes(filename: string, bytes: Buffer, outputFormat: "json" | "csv"): Promise<unknown> {
+  const response = await postBytes(`${CAMT_CONVERT_URL}?format=${outputFormat}`, filename, bytes);
+  const text = await response.text();
+  if (response.status !== 200) throw httpFailure(response, text);
+  if (outputFormat === "csv") return { format: "csv", csv: text };
+  let payload: unknown;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    throw new ApiError("API returned a non-JSON response");
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new ApiError("API returned an unexpected JSON response");
+  }
+  return payload;
 }

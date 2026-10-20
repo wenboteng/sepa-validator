@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sepa-check"
-version = "0.1.0"
-description = "CLI for the free SEPA pain.001 validator API at checksepa.com"
+version = "0.2.0"
+description = "CLI for the free SEPA pain.001 and camt.053/054 APIs at checksepa.com"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Bobook Limited", email = "info@bobook.club" }]
-keywords = ["sepa", "pain.001", "iso20022", "validator", "iban", "xml", "credit-transfer"]
+keywords = ["sepa", "pain.001", "camt.053", "camt.054", "iso20022", "validator", "iban", "xml", "credit-transfer"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",

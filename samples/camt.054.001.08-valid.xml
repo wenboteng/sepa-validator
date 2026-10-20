@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr>
+      <MsgId>MSG-054-08</MsgId>
+      <CreDtTm>2026-10-02T09:30:00+02:00</CreDtTm>
+    </GrpHdr>
+    <Ntfctn>
+      <Id>NTFC-08</Id>
+      <CreDtTm>2026-10-02T09:30:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+      <Ntry>
+        <Amt Ccy="EUR">15.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-10-02</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-10-02</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Prtry>
+            <Cd>NTRF</Cd>
+          </Prtry>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <EndToEndId>E2E-054-08</EndToEndId>
+            </Refs>
+            <RltdPties>
+              <Cdtr>
+                <Pty>
+                  <Nm>Hafen Service</Nm>
+                </Pty>
+              </Cdtr>
+              <CdtrAcct>
+                <Id>
+                  <IBAN>NL91ABNA0417164300</IBAN>
+                </Id>
+              </CdtrAcct>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Card fee</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>

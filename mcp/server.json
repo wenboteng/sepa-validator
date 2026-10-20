@@ -2,20 +2,20 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.wenboteng/sepa-validator",
   "title": "SepaCheck Validator",
-  "description": "Validate one SEPA XML file with the free checksepa.com API.",
+  "description": "Validate SEPA pain.001 and camt.053/054 files with the free checksepa.com API.",
   "websiteUrl": "https://checksepa.com",
   "repository": {
     "url": "https://github.com/wenboteng/sepa-validator",
     "source": "github",
     "subfolder": "mcp"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "sepa-validator-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       }

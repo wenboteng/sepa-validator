@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SepaCheck API",
-    "version": "1.0.0",
-    "description": "Free single-file validation of ISO 20022 SEPA credit transfer XML (pain.001.001.03 and pain.001.001.09). No API key. 30 requests per IP per hour, 200 per IP per UTC day, 2 MB maximum. Higher limits and API keys: https://checksepa.com/api-waitlist. The website route POST /api/validate is a different contract.",
+    "version": "1.1.0",
+    "description": "Free single-file checks for ISO 20022 pain.001 (credit transfer) and camt.053/camt.054 (bank statements). No API key. POST /v1/validate, POST /v1/camt/validate, and POST /v1/camt/convert share 30 requests per IP per hour, 200 per IP per UTC day, and a 2 MB maximum. Higher limits and API keys: https://checksepa.com/api-waitlist. The website route POST /api/validate is a different contract.",
     "contact": {
       "name": "Bobook Limited",
       "email": "info@bobook.club",
@@ -18,7 +18,11 @@
   "tags": [
     {
       "name": "validate",
-      "description": "Public, keyless SEPA XML check"
+      "description": "Public, keyless SEPA pain.001 check"
+    },
+    {
+      "name": "camt",
+      "description": "Public, keyless camt.053 and camt.054 validation and conversion"
     }
   ],
   "paths": {
@@ -27,7 +31,7 @@
         "tags": ["validate"],
         "operationId": "validateSepa",
         "summary": "Validate one SEPA XML file",
-        "description": "Accepts multipart form field `file` or a raw XML body. The file is checked in memory and discarded. pain.001.001.03 and pain.001.001.09 are validated. Other ISO 20022 messages, including pain.008 and camt.053/054, are identified and returned with valid: false.",
+        "description": "Accepts multipart form field `file` or a raw XML body. The file is checked in memory and discarded. pain.001.001.03 and pain.001.001.09 are validated. Other ISO 20022 messages, including pain.008 and camt.053/054, are identified and returned with valid: false. camt schema checks are POST /v1/camt/validate.",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -238,6 +242,174 @@
           }
         }
       }
+    },
+    "/v1/camt/validate": {
+      "post": {
+        "tags": ["camt"],
+        "operationId": "validateCamt",
+        "summary": "Validate one camt.053 or camt.054 file",
+        "description": "Validates against the official ISO 20022 XML Schemas for camt.053.001.02, camt.053.001.08, camt.054.001.02, and camt.054.001.08. Accepts multipart form field `file` or a raw XML body. The file is checked in memory and discarded. Other messages are identified and returned with valid: false. Shares the free quota with POST /v1/validate and POST /v1/camt/convert.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "camt XML file, maximum 2 MB" }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": { "type": "string", "description": "Raw camt XML document, maximum 2 MB" }
+            },
+            "text/xml": {
+              "schema": { "type": "string", "description": "Raw camt XML document, maximum 2 MB" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation report. HTTP 200 is used for both passing and failing files.",
+            "headers": {
+              "X-RateLimit-Limit": { "schema": { "type": "integer", "example": 30 } },
+              "X-RateLimit-Remaining": { "schema": { "type": "integer" } },
+              "X-RateLimit-Reset": { "schema": { "type": "integer" } },
+              "X-RateLimit-Limit-Day": { "schema": { "type": "integer", "example": 200 } },
+              "X-RateLimit-Remaining-Day": { "schema": { "type": "integer" } }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationReport" },
+                "example": {
+                  "valid": false,
+                  "format": "camt.053",
+                  "version": "camt.053.001.08",
+                  "errors": [
+                    {
+                      "code": "XSD-REQUIRED",
+                      "message": "Element '{urn:iso:std:iso:20022:tech:xsd:camt.053.001.08}GrpHdr': Missing child element(s). Expected is ( {urn:iso:std:iso:20022:tech:xsd:camt.053.001.08}CreDtTm ).",
+                      "path": "/Document/BkToCstmrStmt/GrpHdr",
+                      "line": 4
+                    }
+                  ],
+                  "warnings": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty body, or multipart request without a file field.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          },
+          "405": {
+            "description": "GET or HEAD. Use POST.",
+            "headers": { "Allow": { "schema": { "type": "string", "example": "POST" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          },
+          "413": {
+            "description": "File larger than 2 MB.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          },
+          "429": {
+            "description": "Shared free limit exceeded.",
+            "headers": { "Retry-After": { "schema": { "type": "integer" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          }
+        }
+      },
+      "get": {
+        "tags": ["camt"],
+        "operationId": "validateCamtHelp",
+        "summary": "Method not allowed",
+        "responses": {
+          "405": {
+            "description": "Use POST.",
+            "headers": { "Allow": { "schema": { "type": "string", "example": "POST" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          }
+        }
+      }
+    },
+    "/v1/camt/convert": {
+      "post": {
+        "tags": ["camt"],
+        "operationId": "convertCamt",
+        "summary": "Convert one camt.053 or camt.054 file to JSON or CSV",
+        "description": "Returns normalized statements and entries for camt.053.001.02, camt.053.001.08, camt.054.001.02, and camt.054.001.08. format=json is the default. format=csv returns one row per balance or entry. A credit (CRDT) uses the debtor as the counterparty. A debit (DBIT) uses the creditor. Shares the free quota with POST /v1/validate.",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["json", "csv"], "default": "json" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "camt XML file, maximum 2 MB" }
+                }
+              }
+            },
+            "application/xml": {
+              "schema": { "type": "string" }
+            },
+            "text/xml": {
+              "schema": { "type": "string" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Normalized statement. JSON unless format=csv.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CamtDocument" }
+              },
+              "text/csv": {
+                "schema": { "type": "string", "description": "Header plus one row per balance or entry." }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty body, missing file, format other than json or csv, or a message that is not a supported camt statement.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          },
+          "405": {
+            "description": "GET or HEAD. Use POST.",
+            "headers": { "Allow": { "schema": { "type": "string", "example": "POST" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          },
+          "413": {
+            "description": "File larger than 2 MB.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          },
+          "429": {
+            "description": "Shared free limit exceeded.",
+            "headers": { "Retry-After": { "schema": { "type": "integer" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          }
+        }
+      },
+      "get": {
+        "tags": ["camt"],
+        "operationId": "convertCamtHelp",
+        "summary": "Method not allowed",
+        "responses": {
+          "405": {
+            "description": "Use POST.",
+            "headers": { "Allow": { "schema": { "type": "string", "example": "POST" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorReport" } } }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -297,7 +469,7 @@
           "valid": { "type": "boolean", "const": false },
           "error": {
             "type": "string",
-            "enum": ["method_not_allowed", "empty", "missing_file", "bad_request", "payload_too_large", "rate_limit"]
+            "enum": ["method_not_allowed", "empty", "missing_file", "bad_request", "payload_too_large", "rate_limit", "unsupported_message"]
           },
           "message": { "type": "string" },
           "limit": {
@@ -306,7 +478,55 @@
             "description": "Present when error is rate_limit."
           },
           "waitlist": { "type": "string", "format": "uri" },
-          "docs": { "type": "string", "format": "uri" }
+          "docs": { "type": "string", "format": "uri" },
+          "format": { "type": ["string", "null"] },
+          "version": { "type": ["string", "null"] }
+        }
+      },
+      "CamtBalance": {
+        "type": "object",
+        "required": ["type", "amount", "currency", "creditDebit", "date"],
+        "properties": {
+          "type": { "type": ["string", "null"], "examples": ["OPBD", "CLBD"] },
+          "amount": { "type": ["string", "null"], "examples": ["1000.00"] },
+          "currency": { "type": ["string", "null"], "examples": ["EUR"] },
+          "creditDebit": { "type": ["string", "null"], "enum": ["CRDT", "DBIT", null] },
+          "date": { "type": ["string", "null"], "examples": ["2026-10-01"] }
+        }
+      },
+      "CamtEntry": {
+        "type": "object",
+        "required": ["amount", "currency", "creditDebit", "bookingDate", "valueDate", "counterpartyName", "counterpartyIban", "remittanceInfo", "endToEndId"],
+        "properties": {
+          "amount": { "type": ["string", "null"] },
+          "currency": { "type": ["string", "null"] },
+          "creditDebit": { "type": ["string", "null"], "enum": ["CRDT", "DBIT", null] },
+          "bookingDate": { "type": ["string", "null"] },
+          "valueDate": { "type": ["string", "null"] },
+          "counterpartyName": { "type": ["string", "null"] },
+          "counterpartyIban": { "type": ["string", "null"] },
+          "remittanceInfo": { "type": ["string", "null"] },
+          "endToEndId": { "type": ["string", "null"] }
+        }
+      },
+      "CamtStatement": {
+        "type": "object",
+        "required": ["id", "accountIban", "accountCurrency", "balances", "entries"],
+        "properties": {
+          "id": { "type": ["string", "null"] },
+          "accountIban": { "type": ["string", "null"] },
+          "accountCurrency": { "type": ["string", "null"] },
+          "balances": { "type": "array", "items": { "$ref": "#/components/schemas/CamtBalance" } },
+          "entries": { "type": "array", "items": { "$ref": "#/components/schemas/CamtEntry" } }
+        }
+      },
+      "CamtDocument": {
+        "type": "object",
+        "required": ["format", "version", "statements"],
+        "properties": {
+          "format": { "type": ["string", "null"], "examples": ["camt.053", "camt.054"] },
+          "version": { "type": ["string", "null"], "examples": ["camt.053.001.08"] },
+          "statements": { "type": "array", "items": { "$ref": "#/components/schemas/CamtStatement" } }
         }
       }
     }

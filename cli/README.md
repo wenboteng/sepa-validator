@@ -6,6 +6,8 @@ Command-line client for the free, keyless SEPA pain.001 validator API.
 pip install sepa-check
 sepa-check pain001.xml
 sepa-check pain001.xml --json
+sepa-check camt validate statement.xml --json
+sepa-check camt convert statement.xml --format csv
 ```
 
 Until the package is on PyPI, install it from a checkout:
@@ -14,7 +16,7 @@ Until the package is on PyPI, install it from a checkout:
 pip install ./cli
 ```
 
-`FILE` is a SEPA XML document. The command posts it as multipart field `file` to `https://checksepa.com/v1/validate`. Python 3.9+. The only dependency is `requests`.
+`FILE` is a SEPA XML document. The command posts it as multipart field `file` to `https://checksepa.com/v1/validate`. `camt validate` posts to `https://checksepa.com/v1/camt/validate`. `camt convert` posts to `https://checksepa.com/v1/camt/convert`. Python 3.9+. The only dependency is `requests`. Version 0.2.0.
 
 No API key. Free limit: 30 validations per IP per hour, 200 per UTC day, 2 MB maximum. HTTP 429 carries `Retry-After`. Higher limits and API keys: https://checksepa.com/api-waitlist
 

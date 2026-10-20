@@ -1,6 +1,6 @@
-# SEPA pain.001 validator — free API, CLI, and MCP server
+# SEPA pain.001 and camt validator — free API, CLI, and MCP server
 
-Client tools for the free, keyless validator at [checksepa.com](https://checksepa.com). Send one SEPA credit-transfer XML file (ISO 20022 pain.001.001.03 or pain.001.001.09) and get structure and EPC findings back.
+Client tools for the free, keyless API at [checksepa.com](https://checksepa.com). Send one SEPA credit-transfer XML file (ISO 20022 pain.001.001.03 or pain.001.001.09), or a camt.053 / camt.054 bank statement (.02 or .08).
 
 This repository is only the public client: CLI, MCP server, OpenAPI copy, samples, and examples. It does not contain the validator engine.
 
@@ -21,7 +21,7 @@ Higher limits and API keys: [waitlist](https://checksepa.com/api-waitlist) (join
 
 A file can pass here and still be rejected by a bank. Bank implementation guidelines are out of scope. This is not a bank login, EBICS client, Verification of Payee check, or payment initiation.
 
-pain.008 and camt messages are recognised (`format` and `version`) and returned with `valid: false`. They are not rule-checked yet.
+pain.008 is recognised (`format` and `version`) on `POST /v1/validate` and returned with `valid: false`. camt.053 and camt.054 versions .02 and .08 are checked on `POST /v1/camt/validate` and converted on `POST /v1/camt/convert`. A camt file sent to `POST /v1/validate` is still only recognised.
 
 ## curl
 
@@ -77,6 +77,12 @@ Copied from the checksepa.com sample set. Synthetic data and dummy IBANs, not re
 | [`samples/valid-pain001-001-03.xml`](samples/valid-pain001-001-03.xml) | Valid pain.001.001.03. Pass, no errors. |
 | [`samples/valid-pain001-001-09.xml`](samples/valid-pain001-001-09.xml) | Valid pain.001.001.09. Pass, no errors. |
 | [`samples/invalid-pain001-001-03.xml`](samples/invalid-pain001-001-03.xml) | Fail. Includes EPC-CTRLSUM, EPC-IBAN, EPC-NBOFTXS, EPC-CHRGBR, and XSD-REQUIRED. |
+| [`samples/camt.053.001.08-valid.xml`](samples/camt.053.001.08-valid.xml) | Valid camt.053.001.08. Pass on `/v1/camt/validate`. |
+| [`samples/camt.053.001.08-invalid.xml`](samples/camt.053.001.08-invalid.xml) | Invalid camt.053.001.08. Schema errors. |
+| [`samples/camt.053.001.02-valid.xml`](samples/camt.053.001.02-valid.xml) | Valid camt.053.001.02. |
+| [`samples/camt.054.001.08-valid.xml`](samples/camt.054.001.08-valid.xml) | Valid camt.054.001.08. |
+| [`samples/camt.054.001.02-valid.xml`](samples/camt.054.001.02-valid.xml) | Valid camt.054.001.02. |
+| [`samples/camt.054.001.02-invalid.xml`](samples/camt.054.001.02-invalid.xml) | Invalid camt.054.001.02. |
 
 ## CLI
 
@@ -97,11 +103,22 @@ node cli-node/bin/sepa-check.js samples/invalid-pain001-001-03.xml --json
 
 Human output prints each finding with its code, path, and line. `--json` prints the report. Exit `0` when `valid` is true, `1` when the file fails, `2` on usage, file, or HTTP errors (including 413 and 429).
 
+camt subcommands, version 0.2.0:
+
+```bash
+sepa-check camt validate statement.xml
+sepa-check camt validate statement.xml --json
+sepa-check camt convert statement.xml --format json
+sepa-check camt convert statement.xml --format csv
+```
+
+`camt validate` posts to `POST /v1/camt/validate`. `camt convert` posts to `POST /v1/camt/convert`. Convert prints JSON or CSV and exits 0 when the API returns the document. The three routes share the free limit.
+
 After publish, the same commands are `pip install sepa-check` and `npx sepa-check file.xml`. They are not on PyPI or npm yet. Names checked on 19 October 2026: `sepa-check` was unused on both registries, and `sepa-validator-mcp` was unused on npm. See [Publishing](#publishing).
 
 ## MCP server
 
-[`mcp/`](mcp/) is a stdio MCP server, package `sepa-validator-mcp`. It exposes one tool, `validate_sepa`, with `file_path` or `xml`. The result is `valid`, `format`, `version`, `errors[]`, and `warnings[]`.
+[`mcp/`](mcp/) is a stdio MCP server, package `sepa-validator-mcp` 0.2.0. Tools: `validate_sepa`, `camt_validate`, and `camt_convert` (`file_path` or `xml`; convert also takes `format` `json` or `csv`). Validation results are `valid`, `format`, `version`, `errors[]`, and `warnings[]`. Convert JSON is `format`, `version`, and `statements[]` (account IBAN, balances, entries with amount, currency, credit/debit, booking date, value date, counterparty name and IBAN, remittance, end-to-end id).
 
 Registry metadata is in [`mcp/server.json`](mcp/server.json) (`io.github.wenboteng/sepa-validator`). Config snippets for Claude Desktop, Cursor, and VS Code are in [`mcp/README.md`](mcp/README.md). Not submitted to the MCP registry yet.
 
@@ -143,7 +160,9 @@ Antwortfelder: `valid`, `format` (zum Beispiel `pain.001`), `version` (zum Beisp
 
 CLI: `sepa-check datei.xml` (Python) oder `npx sepa-check datei.xml` (Node, nach Veröffentlichung). Exit-Code 0 bei gültig, 1 bei ungültig, 2 bei Aufruf- oder HTTP-Fehler. `--json` gibt den Bericht aus.
 
-pain.008 und camt werden erkannt und mit `valid: false` zurückgegeben. Sie werden noch nicht regelgeprüft. Eine bestandene Datei kann von der Bank trotzdem abgelehnt werden (bankeigene MIG). Kein Bank-Login, kein EBICS, keine Zahlungsauslösung.
+pain.008 wird auf `POST /v1/validate` erkannt und mit `valid: false` zurückgegeben. camt.053 und camt.054 (.02 und .08) prüft `sepa-check camt validate`, die Umwandlung nach JSON oder CSV ist `sepa-check camt convert --format json|csv`. Eine camt-Datei an `POST /v1/validate` wird dort nur erkannt. Die drei Routen teilen sich das Freikontingent. Eine bestandene Datei kann von der Bank trotzdem abgelehnt werden (bankeigene MIG). Kein Bank-Login, kein EBICS, keine Zahlungsauslösung.
+
+Deutsche Beschreibung: [https://checksepa.com/de/camt](https://checksepa.com/de/camt).
 
 Links: [API-Doku](https://checksepa.com/docs), [OpenAPI](https://checksepa.com/openapi.json), [Warteliste](https://checksepa.com/api-waitlist).
 
@@ -162,7 +181,7 @@ cd mcp && npm ci && npm run build && node --test test/*.test.js && node scripts/
 
 ## Publishing
 
-Nothing in this repo is on npm, PyPI, or the MCP registry. Names checked on 19 October 2026 while preparing this tree: `sepa-check` (PyPI and npm) and `sepa-validator-mcp` (npm) were unused (registry 404). Do not publish from CI. Do not publish from this checkout unless you mean to.
+Nothing in this repo is on npm, PyPI, or the MCP registry. Version 0.2.0 adds camt validate and convert. Do not publish it until go-live of the API is approved. Names checked on 19 October 2026 while preparing this tree: `sepa-check` (PyPI and npm) and `sepa-validator-mcp` (npm) were unused (registry 404). Do not publish from CI. Do not publish from this checkout unless you mean to.
 
 PyPI, from a machine logged in via `~/.pypirc` or an API token:
 
