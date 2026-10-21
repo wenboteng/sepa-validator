@@ -120,7 +120,7 @@ After publish, the same commands are `pip install sepa-check` and `npx sepa-chec
 
 [`mcp/`](mcp/) is a stdio MCP server, package `sepa-validator-mcp` 0.2.0. Tools: `validate_sepa`, `camt_validate`, and `camt_convert` (`file_path` or `xml`; convert also takes `format` `json` or `csv`). Validation results are `valid`, `format`, `version`, `errors[]`, and `warnings[]`. Convert JSON is `format`, `version`, and `statements[]` (account IBAN, balances, entries with amount, currency, credit/debit, booking date, value date, counterparty name and IBAN, remittance, end-to-end id).
 
-Registry metadata is in [`mcp/server.json`](mcp/server.json) (`io.github.wenboteng/sepa-validator`). Config snippets for Claude Desktop, Cursor, and VS Code are in [`mcp/README.md`](mcp/README.md). Not submitted to the MCP registry yet.
+Registry metadata is in [`mcp/server.json`](mcp/server.json) (`io.github.wenboteng/sepa-validator`). Config snippets for Claude Desktop, Cursor, and VS Code are in [`mcp/README.md`](mcp/README.md). Listed in the official MCP registry as `io.github.wenboteng/sepa-validator` (v0.2.0).
 
 ## Examples
 
@@ -181,7 +181,7 @@ cd mcp && npm ci && npm run build && node --test test/*.test.js && node scripts/
 
 ## Publishing
 
-Nothing in this repo is on npm, PyPI, or the MCP registry. Version 0.2.0 adds camt validate and convert. Do not publish it until go-live of the API is approved. Names checked on 19 October 2026 while preparing this tree: `sepa-check` (PyPI and npm) and `sepa-validator-mcp` (npm) were unused (registry 404). Do not publish from CI. Do not publish from this checkout unless you mean to.
+Published as version 0.2.0 (camt validate and convert included): `sepa-check` on npm and PyPI, `sepa-validator-mcp` on npm, and `io.github.wenboteng/sepa-validator` in the MCP registry. Do not publish from CI.
 
 PyPI, from a machine logged in via `~/.pypirc` or an API token:
 
