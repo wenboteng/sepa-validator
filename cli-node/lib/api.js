@@ -8,7 +8,7 @@ export const WAITLIST_URL = "https://checksepa.com/api-waitlist";
 export const DOCS_URL = "https://checksepa.com/docs";
 export const CAMT_DOCS_URL = "https://checksepa.com/camt";
 export const MAX_BYTES = 2 * 1024 * 1024;
-export const USER_AGENT = "sepa-check/0.2.0 (+https://checksepa.com)";
+export const USER_AGENT = "sepa-check/0.2.1 (+https://checksepa.com)";
 
 export class ClientError extends Error {
   constructor(message) {
@@ -23,17 +23,37 @@ export function contentTypeFor(name) {
   return "application/octet-stream";
 }
 
+export const HINTS = {
+  XSD: "The file does not match the official schema. Check the namespace version (.001.02 or .001.08) and the element named in the message.",
+  "XSD-REQUIRED": "A required element is missing. Add the child named in the message.",
+  "XSD-UNEXPECTED": "This element is not allowed here. Bank-specific extensions are not in the ISO schema this check uses.",
+  "XSD-TYPE": "A value has the wrong type, length, or pattern.",
+  "XSD-VERSION": "This message version is not checked. camt.053 and camt.054 use .001.02 or .001.08. pain.008 is not supported.",
+  "XSD-PARSE": "The file is not well-formed XML, so the check stopped.",
+  "EPC-IBAN": "Use a compact IBAN with no spaces. It has to pass the ISO 13616 mod-97 check.",
+  "EPC-CTRLSUM": "CtrlSum must equal the sum of the instructed amounts in that block.",
+  "EPC-NBOFTXS": "NbOfTxs must equal the number of credit-transfer transactions in that block.",
+};
+
+export function hintFor(code, apiHint) {
+  if (typeof code === "string" && HINTS[code]) return HINTS[code];
+  if (typeof apiHint === "string" && apiHint.trim()) return apiHint.trim();
+  return "";
+}
+
 function finding(item) {
   const path = typeof item.path === "string" && item.path
     ? item.path
     : typeof item.location === "string"
       ? item.location
       : "";
+  const code = typeof item.code === "string" ? item.code : "";
   return {
-    code: typeof item.code === "string" ? item.code : "",
+    code,
     message: typeof item.message === "string" ? item.message : "",
     path,
     line: Number.isInteger(item.line) ? item.line : null,
+    hint: hintFor(code, item.hint),
   };
 }
 
@@ -71,6 +91,7 @@ export function formatReport(result, filename = "") {
     if (item.line) bits.push(`line ${item.line}`);
     lines.push(bits.join(" "));
     if (item.message) lines.push(`  message: ${item.message}`);
+    if (item.hint) lines.push(`  hint: ${item.hint}`);
   }
   return lines.join("\n") + "\n";
 }

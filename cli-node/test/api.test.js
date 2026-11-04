@@ -29,6 +29,7 @@ test("keeps code, path, and line", () => {
   assert.equal(result.errors[0].code, "EPC-CTRLSUM");
   assert.equal(result.errors[0].line, 8);
   assert.match(formatReport(result, "invalid.xml"), /EPC-CTRLSUM \/Document\/CstmrCdtTrfInitn\/GrpHdr\/CtrlSum line 8/);
+  assert.match(formatReport(result, "invalid.xml"), /hint: CtrlSum must equal/);
 });
 
 test("help and a missing file do not need the network", () => {

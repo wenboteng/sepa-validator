@@ -16,11 +16,25 @@ node cli-node/bin/sepa-check.js pain001.xml
 npx ./cli-node pain001.xml
 ```
 
-`FILE` is a SEPA XML document. The command posts it as multipart field `file` to `https://checksepa.com/v1/validate`. `camt validate` and `camt convert` use `/v1/camt/validate` and `/v1/camt/convert`. Version 0.2.0.
+`FILE` is a SEPA XML document. The command posts it as multipart field `file` to `https://checksepa.com/v1/validate`. `camt validate` and `camt convert` use `/v1/camt/validate` and `/v1/camt/convert`. Version 0.2.1.
 
 No API key. Free limit: 30 validations per IP per hour, 200 per UTC day, 2 MB maximum. HTTP 429 carries `Retry-After`. Higher limits and API keys: https://checksepa.com/api-waitlist
 
-Human output lists each finding with its code, path, and line. `--json` prints `valid`, `format`, `version`, `errors`, and `warnings`.
+Human output lists each failing code, the element path, the line, the message, and a one-line English hint when one is known. `--json` prints `valid`, `format`, `version`, `errors`, and `warnings`, and each finding includes `hint`.
+
+## What each error means
+
+| Code | What to fix |
+| --- | --- |
+| `XSD` | The file does not match the official schema. Check the namespace (`camt.054.001.02` versus `.001.08`) and the element named in the message. |
+| `XSD-REQUIRED` | A required element is missing. Add the child the message names. |
+| `XSD-UNEXPECTED` | An element is not allowed there. Bank-specific extensions are outside this ISO schema. |
+| `XSD-TYPE` | A value has the wrong type, length, or pattern (a common case is a bad IBAN). |
+| `XSD-VERSION` | This message version is not checked. camt.053 and camt.054 use `.001.02` or `.001.08`. pain.008 is not supported. |
+| `EPC-IBAN` | Use a compact IBAN with no spaces that passes the mod-97 check. |
+| `EPC-CTRLSUM` | `CtrlSum` must equal the sum of the instructed amounts. |
+
+camt schema notes and samples: https://checksepa.com/camt . pain.001 docs: https://checksepa.com/docs .
 
 | Exit | Meaning |
 | --- | --- |

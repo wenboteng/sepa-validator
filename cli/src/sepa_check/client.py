@@ -13,7 +13,7 @@ WAITLIST_URL = "https://checksepa.com/api-waitlist"
 DOCS_URL = "https://checksepa.com/docs"
 CAMT_DOCS_URL = "https://checksepa.com/camt"
 MAX_BYTES = 2 * 1024 * 1024
-USER_AGENT = "sepa-check/0.2.0 (+https://checksepa.com)"
+USER_AGENT = "sepa-check/0.2.1 (+https://checksepa.com)"
 TIMEOUT = (10, 120)
 
 
@@ -28,6 +28,27 @@ def content_type_for(name: str) -> str:
     return "application/octet-stream"
 
 
+HINTS = {
+    "XSD": "The file does not match the official schema. Check the namespace version (.001.02 or .001.08) and the element named in the message.",
+    "XSD-REQUIRED": "A required element is missing. Add the child named in the message.",
+    "XSD-UNEXPECTED": "This element is not allowed here. Bank-specific extensions are not in the ISO schema this check uses.",
+    "XSD-TYPE": "A value has the wrong type, length, or pattern.",
+    "XSD-VERSION": "This message version is not checked. camt.053 and camt.054 use .001.02 or .001.08. pain.008 is not supported.",
+    "XSD-PARSE": "The file is not well-formed XML, so the check stopped.",
+    "EPC-IBAN": "Use a compact IBAN with no spaces. It has to pass the ISO 13616 mod-97 check.",
+    "EPC-CTRLSUM": "CtrlSum must equal the sum of the instructed amounts in that block.",
+    "EPC-NBOFTXS": "NbOfTxs must equal the number of credit-transfer transactions in that block.",
+}
+
+
+def hint_for(code: Any, api_hint: Any) -> str:
+    if isinstance(code, str) and code in HINTS:
+        return HINTS[code]
+    if isinstance(api_hint, str) and api_hint.strip():
+        return api_hint.strip()
+    return ""
+
+
 def _finding(item: dict[str, Any]) -> dict[str, Any]:
     code = item.get("code") if isinstance(item.get("code"), str) else ""
     message = item.get("message") if isinstance(item.get("message"), str) else ""
@@ -35,7 +56,7 @@ def _finding(item: dict[str, Any]) -> dict[str, Any]:
     if not path and isinstance(item.get("location"), str):
         path = item["location"]
     line = item.get("line") if isinstance(item.get("line"), int) else None
-    return {"code": code, "message": message, "path": path, "line": line}
+    return {"code": code, "message": message, "path": path, "line": line, "hint": hint_for(code, item.get("hint"))}
 
 
 def _findings(value: Any) -> list[dict[str, Any]]:
@@ -86,6 +107,8 @@ def format_report(result: dict[str, Any], filename: str = "") -> str:
         lines.append(" ".join(bits))
         if item.get("message"):
             lines.append(f"  message: {item['message']}")
+        if item.get("hint"):
+            lines.append(f"  hint: {item['hint']}")
     return "\n".join(lines) + "\n"
 
 

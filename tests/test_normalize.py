@@ -35,6 +35,7 @@ class NormalizeTests(unittest.TestCase):
         self.assertIn("invalid: invalid.xml", text)
         self.assertIn("line 50", text)
         self.assertIn("EPC-IBAN", text)
+        self.assertIn("hint: Use a compact IBAN", text)
 
     def test_line_null_stays_null(self):
         result = normalize(
