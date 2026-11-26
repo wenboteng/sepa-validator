@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sepa-check"
-version = "0.2.0"
+version = "0.2.1"
 description = "CLI for the free SEPA pain.001 and camt.053/054 APIs at checksepa.com"
 readme = "README.md"
 requires-python = ">=3.9"

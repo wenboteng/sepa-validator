@@ -39,7 +39,7 @@ export function rateLimitMessage(text: string, retry: string | null, ref = "mcp"
   return `rate limit reached (HTTP 429).${wait} ${message || "Free limit: 30 per IP per hour, 200 per UTC day."}\nGet an API Pro key (EUR 19/month, 5,000 calls per month): ${upgrade}`;
 }
 export const MAX_BYTES = 2 * 1024 * 1024;
-const USER_AGENT = "sepa-validator-mcp/0.2.0 (+https://checksepa.com)";
+const USER_AGENT = "sepa-validator-mcp/0.2.1 (+https://checksepa.com)";
 
 export class ApiError extends Error {
   constructor(message: string) {

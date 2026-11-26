@@ -40,7 +40,7 @@ export function rateLimitMessage(text, retry, ref = "cli") {
 export const DOCS_URL = "https://checksepa.com/docs";
 export const CAMT_DOCS_URL = "https://checksepa.com/camt";
 export const MAX_BYTES = 2 * 1024 * 1024;
-export const USER_AGENT = "sepa-check/0.2.0 (+https://checksepa.com)";
+export const USER_AGENT = "sepa-check/0.2.1 (+https://checksepa.com)";
 
 export class ClientError extends Error {
   constructor(message) {

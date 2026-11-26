@@ -44,7 +44,7 @@ def rate_limit_message(text: str, retry: str | None, ref: str = "cli-python") ->
 DOCS_URL = "https://checksepa.com/docs"
 CAMT_DOCS_URL = "https://checksepa.com/camt"
 MAX_BYTES = 2 * 1024 * 1024
-USER_AGENT = "sepa-check/0.2.0 (+https://checksepa.com)"
+USER_AGENT = "sepa-check/0.2.1 (+https://checksepa.com)"
 TIMEOUT = (10, 120)
 
 

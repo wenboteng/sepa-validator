@@ -1,6 +1,6 @@
 {
   "name": "sepa-check",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CLI for the free SEPA pain.001 and camt.053/054 APIs at checksepa.com",
   "license": "MIT",
   "author": "Bobook Limited",
