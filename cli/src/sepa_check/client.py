@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,36 @@ API_URL = "https://checksepa.com/v1/validate"
 CAMT_VALIDATE_URL = "https://checksepa.com/v1/camt/validate"
 CAMT_CONVERT_URL = "https://checksepa.com/v1/camt/convert"
 WAITLIST_URL = "https://checksepa.com/api-waitlist"
+# Shown when the free limit is hit (HTTP 429). utm_* and ref let the site count clicks.
+API_PRO_URL = "https://checksepa.com/docs?utm_source=cli-python&utm_medium=429&utm_campaign=api_pro#paid-offers"
+
+
+def _with_ref(url: str, ref: str) -> str:
+    parts = urlsplit(url)
+    query = [(k, v) for k, v in parse_qsl(parts.query) if k != "ref"] + [("ref", ref)]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
+def rate_limit_message(text: str, retry: str | None, ref: str = "cli-python") -> str:
+    """Text for a 429: the server message plus a link to buy an API Pro key."""
+    wait = f" Retry-After: {retry}s." if retry else ""
+    try:
+        data = json.loads(text or "")
+    except ValueError:
+        data = None
+    if not isinstance(data, dict):
+        data = {}
+    message = data.get("message").strip() if isinstance(data.get("message"), str) else ""
+    server_url = data.get("upgrade_url") if isinstance(data.get("upgrade_url"), str) else ""
+    if not server_url.startswith("https://"):
+        server_url = ""
+    upgrade = _with_ref(server_url, ref) if server_url else API_PRO_URL
+    if server_url and server_url in message:
+        return f"rate limit reached (HTTP 429).{wait} {message.replace(server_url, upgrade)}"
+    return (
+        f"rate limit reached (HTTP 429).{wait} {message or 'Free limit: 30 per IP per hour, 200 per UTC day.'}\n"
+        f"Get an API Pro key (EUR 19/month, 5,000 calls per month): {upgrade}"
+    )
 DOCS_URL = "https://checksepa.com/docs"
 CAMT_DOCS_URL = "https://checksepa.com/camt"
 MAX_BYTES = 2 * 1024 * 1024
@@ -180,11 +211,8 @@ def _http_error(response: Any) -> str:
     if len(body) > 500:
         body = body[:500] + "…"
     if response.status_code == 429:
-        wait = f" Retry-After: {retry}s." if retry else ""
-        return (
-            f"rate limit reached (HTTP 429).{wait} "
-            f"Free limit: 30 per IP per hour, 200 per UTC day. Waitlist: {WAITLIST_URL}. {body}"
-        ).strip()
+        return rate_limit_message(response.text or "", retry)
+
     if response.status_code == 413:
         return f"file too large (HTTP 413). The API accepts at most 2 MB. {body}".strip()
     extra = f" Retry-After: {retry}s." if retry else ""

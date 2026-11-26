@@ -5,6 +5,38 @@ export const API_URL = "https://checksepa.com/v1/validate";
 export const CAMT_VALIDATE_URL = "https://checksepa.com/v1/camt/validate";
 export const CAMT_CONVERT_URL = "https://checksepa.com/v1/camt/convert";
 export const WAITLIST_URL = "https://checksepa.com/api-waitlist";
+
+// Shown when the free limit is hit (HTTP 429). utm_* and ref let the site count clicks.
+export const API_PRO_URL = "https://checksepa.com/docs?utm_source=cli&utm_medium=429&utm_campaign=api_pro#paid-offers";
+
+function withRef(url, ref) {
+  try {
+    const u = new URL(url);
+    u.searchParams.set("ref", ref);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/** Text for a 429: the server message plus a link to buy an API Pro key. */
+export function rateLimitMessage(text, retry, ref = "cli") {
+  const wait = retry ? ` Retry-After: ${retry}s.` : "";
+  let data = null;
+  try {
+    data = JSON.parse(text || "");
+  } catch {
+    data = null;
+  }
+  const message = data && typeof data.message === "string" ? data.message.trim() : "";
+  const serverUrl =
+    data && typeof data.upgrade_url === "string" && data.upgrade_url.startsWith("https://") ? data.upgrade_url : "";
+  const upgrade = serverUrl ? withRef(serverUrl, ref) : API_PRO_URL;
+  if (serverUrl && message.includes(serverUrl)) {
+    return `rate limit reached (HTTP 429).${wait} ${message.replace(serverUrl, upgrade)}`;
+  }
+  return `rate limit reached (HTTP 429).${wait} ${message || "Free limit: 30 per IP per hour, 200 per UTC day."}\nGet an API Pro key (EUR 19/month, 5,000 calls per month): ${upgrade}`;
+}
 export const DOCS_URL = "https://checksepa.com/docs";
 export const CAMT_DOCS_URL = "https://checksepa.com/camt";
 export const MAX_BYTES = 2 * 1024 * 1024;
@@ -196,8 +228,7 @@ function httpError(response, text) {
   let body = (text || "").trim().replace(/\s+/g, " ");
   if (body.length > 500) body = body.slice(0, 500) + "…";
   if (response.status === 429) {
-    const wait = retry ? ` Retry-After: ${retry}s.` : "";
-    return `rate limit reached (HTTP 429).${wait} Free limit: 30 per IP per hour, 200 per UTC day. Waitlist: ${WAITLIST_URL}. ${body}`.trim();
+    return rateLimitMessage(text, retry, "cli");
   }
   if (response.status === 413) {
     return `file too large (HTTP 413). The API accepts at most 2 MB. ${body}`.trim();
