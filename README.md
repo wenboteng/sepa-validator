@@ -1,5 +1,7 @@
 # SEPA pain.001 and camt validator — free API, CLI, and MCP server
 
+[![wenboteng/sepa-validator MCP server](https://glama.ai/mcp/servers/wenboteng/sepa-validator/badges/score.svg)](https://glama.ai/mcp/servers/wenboteng/sepa-validator)
+
 Client tools for the free, keyless API at [checksepa.com](https://checksepa.com). Send one SEPA credit-transfer XML file (ISO 20022 pain.001.001.03 or pain.001.001.09), or a camt.053 / camt.054 bank statement (.02 or .08).
 
 This repository is only the public client: CLI, MCP server, OpenAPI copy, samples, and examples. It does not contain the validator engine.
@@ -21,7 +23,7 @@ Higher limits and API keys: [waitlist](https://checksepa.com/api-waitlist) (join
 
 A file can pass here and still be rejected by a bank. Bank implementation guidelines are out of scope. This is not a bank login, EBICS client, Verification of Payee check, or payment initiation.
 
-pain.008 is recognised (`format` and `version`) on `POST /v1/validate` and returned with `valid: false`. camt.053 and camt.054 versions .02 and .08 are checked on `POST /v1/camt/validate` and converted on `POST /v1/camt/convert`. A camt file sent to `POST /v1/validate` is still only recognised.
+`validate_sepa` also checks pain.008.001.02 and .001.08. camt.053 and camt.054 versions .02 and .08 are checked on `POST /v1/camt/validate` and converted on `POST /v1/camt/convert`. A camt file sent to `POST /v1/validate` is still only recognised.
 
 ## curl
 
@@ -114,7 +116,7 @@ sepa-check camt convert statement.xml --format csv
 
 `camt validate` posts to `POST /v1/camt/validate`. `camt convert` posts to `POST /v1/camt/convert`. Convert prints JSON or CSV and exits 0 when the API returns the document. The three routes share the free limit.
 
-After publish, the same commands are `pip install sepa-check` and `npx sepa-check file.xml`. They are not on PyPI or npm yet. Names checked on 19 October 2026: `sepa-check` was unused on both registries, and `sepa-validator-mcp` was unused on npm. See [Publishing](#publishing).
+The published commands are `pip install sepa-check`, `npx sepa-check file.xml`, and `npx -y sepa-validator-mcp`. The MCP registry id is `io.github.wenboteng/sepa-validator`. See [Publishing](#publishing) and [llms-install.md](llms-install.md).
 
 ## MCP server
 
@@ -158,9 +160,9 @@ Die Beispieldateien unter [`samples/`](samples/) sind synthetisch, mit Dummy-IBA
 
 Antwortfelder: `valid`, `format` (zum Beispiel `pain.001`), `version` (zum Beispiel `pain.001.001.03`), `errors[]` und `warnings[]`. Jeder Fund hat `code`, `message`, `path` und `line`.
 
-CLI: `sepa-check datei.xml` (Python) oder `npx sepa-check datei.xml` (Node, nach Veröffentlichung). Exit-Code 0 bei gültig, 1 bei ungültig, 2 bei Aufruf- oder HTTP-Fehler. `--json` gibt den Bericht aus.
+CLI: `pip install sepa-check` oder `npx sepa-check datei.xml`. MCP: `npx -y sepa-validator-mcp`. Registry: `io.github.wenboteng/sepa-validator`. Exit-Code 0 bei gültig, 1 bei ungültig, 2 bei Aufruf- oder HTTP-Fehler. `--json` gibt den Bericht aus.
 
-pain.008 wird auf `POST /v1/validate` erkannt und mit `valid: false` zurückgegeben. camt.053 und camt.054 (.02 und .08) prüft `sepa-check camt validate`, die Umwandlung nach JSON oder CSV ist `sepa-check camt convert --format json|csv`. Eine camt-Datei an `POST /v1/validate` wird dort nur erkannt. Die drei Routen teilen sich das Freikontingent. Eine bestandene Datei kann von der Bank trotzdem abgelehnt werden (bankeigene MIG). Kein Bank-Login, kein EBICS, keine Zahlungsauslösung.
+`validate_sepa` prüft auch pain.008.001.02 und .001.08. camt.053 und camt.054 (.02 und .08) prüft `sepa-check camt validate`, die Umwandlung nach JSON oder CSV ist `sepa-check camt convert --format json|csv`. Eine camt-Datei an `POST /v1/validate` wird dort nur erkannt. Die drei Routen teilen sich das Freikontingent. Eine bestandene Datei kann von der Bank trotzdem abgelehnt werden (bankeigene MIG). Kein Bank-Login, kein EBICS, keine Zahlungsauslösung.
 
 Deutsche Beschreibung: [https://checksepa.com/de/camt](https://checksepa.com/de/camt).
 
