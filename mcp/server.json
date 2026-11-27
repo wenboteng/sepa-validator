@@ -9,7 +9,21 @@
     "source": "github",
     "subfolder": "mcp"
   },
-  "version": "0.2.1",
+  "version": "0.3.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://checksepa.com/mcp",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "description": "Optional free API key (500 calls a month) from https://checksepa.com/docs#free-key. Without it: 30 calls per IP per hour, 200 per UTC day.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
   "packages": [
     {
       "registryType": "npm",

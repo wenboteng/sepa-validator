@@ -12,6 +12,10 @@ Free limit: 30 requests per IP per hour, 200 per UTC day, 2 MB. The file is not 
 
 Package name: `sepa-validator-mcp`. Registry name in [`server.json`](server.json): `io.github.wenboteng/sepa-validator` (`mcpName` matches). Install with `npx -y sepa-validator-mcp`. Build from a checkout with `npm run build` (`node dist/index.js`).
 
+## Hosted MCP server (no install)
+
+`https://checksepa.com/mcp` is a remote MCP server (Streamable HTTP) with the same tools: `validate_sepa`, `camt_validate` and `camt_convert` (`xml`, plus `format` json or csv for convert). Files are sent inline, nothing is stored. Without a key the free limit is 30 calls per IP per hour and 200 per UTC day; send a [free API key](https://checksepa.com/docs#free-key) as `X-API-Key` or `Authorization: Bearer` for 500 a month. Claude Code: `claude mcp add --transport http sepa https://checksepa.com/mcp`. Generic config: `{"mcpServers": {"sepa": {"type": "http", "url": "https://checksepa.com/mcp"}}}`.
+
 ## Claude Desktop
 
 `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`, Windows: `%APPDATA%\Claude\claude_desktop_config.json`):

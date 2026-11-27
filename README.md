@@ -124,6 +124,10 @@ The published commands are `pip install sepa-check`, `npx sepa-check file.xml`, 
 
 Registry metadata is in [`mcp/server.json`](mcp/server.json) (`io.github.wenboteng/sepa-validator`). Config snippets for Claude Desktop, Cursor, and VS Code are in [`mcp/README.md`](mcp/README.md). Listed in the official MCP registry as `io.github.wenboteng/sepa-validator` (v0.2.1).
 
+### Hosted MCP server (no install)
+
+`https://checksepa.com/mcp` is a remote MCP server (Streamable HTTP) with the same tools: `validate_sepa`, `camt_validate` and `camt_convert` (`xml`, plus `format` json or csv for convert). Files are sent inline, nothing is stored. Without a key the free limit is 30 calls per IP per hour and 200 per UTC day; send a [free API key](https://checksepa.com/docs#free-key) as `X-API-Key` or `Authorization: Bearer` for 500 a month. Claude Code: `claude mcp add --transport http sepa https://checksepa.com/mcp`. Generic config: `{"mcpServers": {"sepa": {"type": "http", "url": "https://checksepa.com/mcp"}}}`.
+
 ## Examples
 
 Short snippets that post the `file` field. Each run spends one free validation.
