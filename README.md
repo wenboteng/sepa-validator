@@ -19,7 +19,7 @@ The file is uploaded to `POST https://checksepa.com/v1/validate` for that reques
 | Over the hourly or daily limit | HTTP 429 and `Retry-After` |
 | Over 2 MB | HTTP 413 |
 
-Higher limits and API keys: [waitlist](https://checksepa.com/api-waitlist) (joining is free; planned from EUR 79/month, charged only after confirmation). Docs: [https://checksepa.com/docs](https://checksepa.com/docs). Machine-readable contract: [openapi.json](https://checksepa.com/openapi.json) (copy in [`openapi/openapi.json`](openapi/openapi.json)).
+More volume: a [free API key](https://checksepa.com/docs#free-key) gives 500 calls per calendar month instead of the per-IP limits (60 per minute, from any IP, for example in CI). Send it as the `X-API-Key` header: `curl -H "X-API-Key: sepa_free_..." -F "file=@payments.xml" https://checksepa.com/v1/validate`. [API Pro](https://checksepa.com/docs#paid-offers) (EUR 19/month, 5,000 calls) and API Business (EUR 79/month, 50,000 calls) upgrade that same key, so your code does not change. The CLI and MCP server below call the keyless API. Docs: [https://checksepa.com/docs](https://checksepa.com/docs). Machine-readable contract: [openapi.json](https://checksepa.com/openapi.json) (copy in [`openapi/openapi.json`](openapi/openapi.json)).
 
 A file can pass here and still be rejected by a bank. Bank implementation guidelines are out of scope. This is not a bank login, EBICS client, Verification of Payee check, or payment initiation.
 
@@ -105,7 +105,7 @@ node cli-node/bin/sepa-check.js samples/invalid-pain001-001-03.xml --json
 
 Human output prints each finding with its code, path, and line. `--json` prints the report. Exit `0` when `valid` is true, `1` when the file fails, `2` on usage, file, or HTTP errors (including 413 and 429).
 
-camt subcommands, version 0.2.0:
+camt subcommands (since 0.2.0):
 
 ```bash
 sepa-check camt validate statement.xml
@@ -120,9 +120,9 @@ The published commands are `pip install sepa-check`, `npx sepa-check file.xml`, 
 
 ## MCP server
 
-[`mcp/`](mcp/) is a stdio MCP server, package `sepa-validator-mcp` 0.2.0. Tools: `validate_sepa`, `camt_validate`, and `camt_convert` (`file_path` or `xml`; convert also takes `format` `json` or `csv`). Validation results are `valid`, `format`, `version`, `errors[]`, and `warnings[]`. Convert JSON is `format`, `version`, and `statements[]` (account IBAN, balances, entries with amount, currency, credit/debit, booking date, value date, counterparty name and IBAN, remittance, end-to-end id).
+[`mcp/`](mcp/) is a stdio MCP server, package `sepa-validator-mcp` 0.2.1. Tools: `validate_sepa`, `camt_validate`, and `camt_convert` (`file_path` or `xml`; convert also takes `format` `json` or `csv`). Validation results are `valid`, `format`, `version`, `errors[]`, and `warnings[]`. Convert JSON is `format`, `version`, and `statements[]` (account IBAN, balances, entries with amount, currency, credit/debit, booking date, value date, counterparty name and IBAN, remittance, end-to-end id).
 
-Registry metadata is in [`mcp/server.json`](mcp/server.json) (`io.github.wenboteng/sepa-validator`). Config snippets for Claude Desktop, Cursor, and VS Code are in [`mcp/README.md`](mcp/README.md). Listed in the official MCP registry as `io.github.wenboteng/sepa-validator` (v0.2.0).
+Registry metadata is in [`mcp/server.json`](mcp/server.json) (`io.github.wenboteng/sepa-validator`). Config snippets for Claude Desktop, Cursor, and VS Code are in [`mcp/README.md`](mcp/README.md). Listed in the official MCP registry as `io.github.wenboteng/sepa-validator` (v0.2.1).
 
 ## Examples
 
@@ -141,7 +141,7 @@ Short snippets that post the `file` field. Each run spends one free validation.
 
 - Docs: [https://checksepa.com/docs](https://checksepa.com/docs)
 - OpenAPI: [https://checksepa.com/openapi.json](https://checksepa.com/openapi.json)
-- API waitlist: [https://checksepa.com/api-waitlist](https://checksepa.com/api-waitlist)
+- Free API key: [https://checksepa.com/docs#free-key](https://checksepa.com/docs#free-key)
 - Samples on the site: [https://checksepa.com/samples](https://checksepa.com/samples)
 
 ## Deutsch
@@ -150,7 +150,7 @@ Kostenlose Client-Werkzeuge für die Prüfung von SEPA-Überweisungen (ISO 20022
 
 Die Datei geht an `POST https://checksepa.com/v1/validate` und wird für diese eine Anfrage geprüft. Sie wird nicht gespeichert.
 
-Grenzen: 30 Prüfungen pro IP und Stunde, 200 pro IP und UTC-Tag, maximal 2 MB. Darüber HTTP 429 mit `Retry-After`, bei mehr als 2 MB HTTP 413. Höhere Limits und API-Schlüssel über die [Warteliste](https://checksepa.com/api-waitlist) (ab 79 €/Monat geplant, Zahlung erst nach Bestätigung).
+Grenzen: 30 Prüfungen pro IP und Stunde, 200 pro IP und UTC-Tag, maximal 2 MB. Darüber HTTP 429 mit `Retry-After`, bei mehr als 2 MB HTTP 413. Mehr Volumen: Ein [kostenloser API-Key](https://checksepa.com/docs#free-key) gibt 500 Aufrufe pro Kalendermonat statt der IP-Grenzen (60 pro Minute, von jeder IP, z. B. in CI), im Header `X-API-Key`. API Pro (19 €/Monat, 5.000 Aufrufe) und API Business (79 €/Monat, 50.000 Aufrufe) upgraden denselben Key.
 
 ```bash
 curl -F "file=@samples/valid-pain001-001-03.xml" https://checksepa.com/v1/validate
@@ -166,7 +166,7 @@ CLI: `pip install sepa-check` oder `npx sepa-check datei.xml`. MCP: `npx -y sepa
 
 Deutsche Beschreibung: [https://checksepa.com/de/camt](https://checksepa.com/de/camt).
 
-Links: [API-Doku](https://checksepa.com/docs), [OpenAPI](https://checksepa.com/openapi.json), [Warteliste](https://checksepa.com/api-waitlist).
+Links: [API-Doku](https://checksepa.com/docs), [OpenAPI](https://checksepa.com/openapi.json), [Kostenloser API-Key](https://checksepa.com/docs#free-key).
 
 ## Development
 
@@ -183,7 +183,7 @@ cd mcp && npm ci && npm run build && node --test test/*.test.js && node scripts/
 
 ## Publishing
 
-Published as version 0.2.0 (camt validate and convert included): `sepa-check` on npm and PyPI, `sepa-validator-mcp` on npm, and `io.github.wenboteng/sepa-validator` in the MCP registry. Do not publish from CI.
+Published as version 0.2.1 (camt validate and convert since 0.2.0): `sepa-check` on npm and PyPI, `sepa-validator-mcp` on npm, and `io.github.wenboteng/sepa-validator` in the MCP registry. Do not publish from CI.
 
 PyPI, from a machine logged in via `~/.pypirc` or an API token:
 
